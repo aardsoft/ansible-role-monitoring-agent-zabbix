@@ -1,0 +1,88 @@
+---
+# This playbook will install the zabbix agent
+- name: Install Policy Coreutils package
+  yum: name=policycoreutils state=present
+
+- name: Install Libselinux-python
+  yum: name=libselinux-python state=present
+
+- name: Install libsemanage-python
+  yum: name=libsemanage-python state=present
+
+- name: Install Zabbix Repository
+  when: zbx_repo_enabled == 1
+  yum: name={{zbx_repo}} state=present
+
+- name: install zabbix agent packages
+  yum: name={{ item }} state=present update_cache=yes
+  with_items:
+    - zabbix22-agent
+
+- name: Ensures include dirs exists
+  file: path={{ item }} state=directory
+  with_items: "{{ zbx_agent_Include }}"
+
+- name: Install Zabbix Agentd Config File
+  template: src=zabbix_agentd.conf.j2 dest=/etc/zabbix_agentd.conf owner=root group=root mode=0644 backup=yes
+  notify:
+    - restart zabbix-agent
+
+- name: Install Zabbix Agent Config File
+  template: src=zabbix_agent.conf.j2 dest=/etc/zabbix_agent.conf owner=root group=root mode=0644 backup=yes
+  notify:
+    - restart zabbix-agent
+
+- name: Ensure Zabbix Agent is running
+  service: name=zabbix-agent state=started enabled=yes
+  notify:
+    - restart zabbix-agent
+
+- include: iptables.yml
+  when: ansible_distribution_major_version == "6"
+
+- name: Check to see if firewalld is enabled
+  shell: systemctl is-enabled firewalld
+  register: firewalld_enabled
+  ignore_errors: True
+  when: ansible_distribution_major_version == '7'
+
+- name: Make sure Firewalld is started
+  service: name=firewalld state=started
+  when: firewalld_enabled is defined and firewalld_enabled.stdout == "enabled"
+
+- name: Open the Firewalld port 10050/tcp on Zabbix-server
+  firewalld: port=10050/tcp permanent=true state=enabled
+  when: firewalld_enabled is defined and firewalld_enabled.stdout == "enabled"
+  notify:
+    - restart firewalld
+
+- name: Open the Firewalld port 10050/udp on Zabbix-server
+  firewalld: port=10050/udp permanent=true state=enabled
+  when: firewalld_enabled is defined and firewalld_enabled.stdout == "enabled"
+  notify:
+    - restart firewalld
+
+- name: Configure SELinux Policy zabbix
+  seboolean: name=zabbix_can_network state=yes persistent=yes
+
+- name: Create a new host or update an existing host's info
+  become: no
+  local_action:
+    module: zabbix_host
+    server_url: "{{ server_url }}"
+    login_user: "{{ login_user }}"
+    login_password: "{{ login_password }}"
+    host_name: "{{ ansible_hostname }}"
+    host_groups: "{{ host_groups }}"
+    link_templates: "{{ link_templates }}"
+    status: "{{ status }}"
+    state: "{{ state }}"
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: "{{ ansible_default_ipv4.address }}"
+        dns: ""
+        port: 10050
+    proxy: ""
+  when: zbx_create_host == 1
