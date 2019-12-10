@@ -16,7 +16,7 @@
 - name: install zabbix agent packages
   yum: name={{ item }} state=present update_cache=yes
   with_items:
-    - zabbix22-agent
+    - "{{ zbx_agent_rpmname }}"
 
 - name: Ensures include dirs exists
   file: path={{ item }} state=directory
