@@ -64,6 +64,7 @@
 
 - name: Configure SELinux Policy zabbix
   seboolean: name=zabbix_can_network state=yes persistent=yes
+  when: ansible_selinux is defined and ansible_selinux != False and ansible_selinux.status == 'enabled'
 
 - name: Create a new host or update an existing host's info
   become: no
