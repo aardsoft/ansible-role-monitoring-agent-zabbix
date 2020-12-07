@@ -9,8 +9,7 @@ zbx_agent_ServerActive: "{{ zabbix_active_server }}" # Active Server Checks
 
 # API
 server_url: "{{ zabbix_api_url }}"      # Add the url to the API
-login_user: "{{ zabbix_api_user | default('Admin') }}"                                     # Login for the user with API rights
-login_password: "{{ zabbix_api_password | default('zabbix') }}"                                # Password for the API user
+
 host_groups:                                            # List of host groups the host should belong to start each group with -
           - "Linux servers"
           - "Slack Alarm"
@@ -18,9 +17,6 @@ link_templates:                                         # A list of templates th
           - "Template OS Linux by Zabbix agent"
           - "Template App SSH Service"
           - "Template Module ICMP Ping"
-status: "enabled"                                       # Status of the host enabled or disabled
-state: "present"
-
 
 # Zabbix Repository & Epel repos
 #TODO: make repo fully configurable
