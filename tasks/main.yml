@@ -30,7 +30,9 @@
 
 - name: remove old zabbix agent
   yum:
-    name: zabbix22-agent
+    name:
+      - zabbix22
+      - zabbix22-agent
     state: absent
   when: >
     ansible_os_family == "RedHat" and
