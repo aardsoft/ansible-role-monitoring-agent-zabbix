@@ -18,7 +18,8 @@
       os: default-os
       site_rack: "{{network_nodes[_zabbix_host].rack|default('')}}"
 
-- set_fact:
+- name: get inventory facts for myself
+  set_fact:
     _zinventory:
       hw_arch: "{{ansible_architecture}}"
       os: "{{ansible_distribution}} {{ansible_distribution_version}}"
@@ -30,7 +31,8 @@
 - set_fact:
     _zd: "{{ _zd | combine (_zinventory)}}"
 
-- set_fact:
+- name: get inventory facts for kvm/lxc
+  set_fact:
     _zvirt:
       chassis: "{{ansible_virtualization_type}} on {{network_nodes[inventory_hostname].machine}}"
       type: "{{ansible_virtualization_type}}"
@@ -47,7 +49,8 @@
 # ansible_product_uuid
 # ansible_product_version
 # ansible_system: Linux
-- set_fact:
+- name: get inventory facts for hardware
+  set_fact:
     _zhw:
       hardware_full: "cpus: {{ansible_processor_count}} cores: {{ansible_processor_cores}} threads: {{ansible_processor_vcpus}} bios: {{ansible_bios_version}} bios date: {{ansible_bios_date}}"
       chassis: "{{ansible_product_name}}"
@@ -56,12 +59,15 @@
       type: "{{ansible_form_factor}}"
   when: >
     ansible_virtualization_role is undefined or
-    ansible_virtualization_role == 'host'
+    ansible_virtualization_role == 'host' or
+    ansible_virtualization_role == 'NA'
 
 - set_fact:
     _zd: "{{ _zd | combine (_zhw)}}"
   when: >
     ansible_virtualization_role is undefined or
-    ansible_virtualization_role == 'host'
+    ansible_virtualization_role == 'host' or
+    ansible_virtualization_role == 'NA'
+
 - set_fact:
     _zabbix_inventory_dict: "{{_zd}}"
