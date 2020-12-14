@@ -12,7 +12,7 @@
 # Server=
 
 #Server=127.0.0.1
-Server={{ zbx_server_Passive }}
+Server={{ zbx_server_ip|default(zbx_server_Passive) }}
 
 ############ ADVANCED PARAMETERS #################
 

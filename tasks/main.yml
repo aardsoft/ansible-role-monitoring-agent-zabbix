@@ -65,6 +65,38 @@
 - debug:
     var: ansible_facts.services
 
+- set_fact:
+    zbx_client_ip: "{{hostvars[inventory_hostname]['ansible_'+zabbix_interface]['ipv4']['address']}}"
+  when: >
+    zbx_client_ip is undefined and
+    zabbix_interface is defined
+
+# this would be nice and easy if ansible_all_ipv4_addresses would contain
+# netmasks...
+- name: try to locate client IP by available networks
+  set_fact:
+    zbx_server_ip: "{{__netconf.0|ipaddr('address')}}"
+    zbx_client_ip: "{{hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address}}"
+  loop_control:
+    loop_var: __netconf
+  with_nested:
+    - "{{zabbix_server_ips|default({})}}"
+    - "{{hostvars[inventory_hostname]['ansible_interfaces']}}"
+  when: >
+    zbx_client_ip is undefined and
+    hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address is defined and
+    __netconf.0|ipaddr('network/prefix') ==
+      (hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address + "/" +
+       hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.netmask)|ipaddr('network/prefix')
+
+# server IP is used in the template to override both server and active server,
+# if a subnet match was found
+- debug:
+    msg:
+      - "using client IP {{zbx_client_ip}}"
+      - "using server IP {{zbx_server_ip|default('')}}"
+  when: zbx_client_ip is defined
+
 - name: configure zabbix agent TCP port
   firewalld:
     port: 10050/tcp
@@ -131,39 +163,6 @@
     ansible_selinux is defined and
     ansible_selinux != False and
     ansible_selinux.status == 'enabled'
-
-# TODO, add option to find interface by checking for network. obviously only works on non-routed connections
-- set_fact:
-    zbx_client_ip: "{{hostvars[inventory_hostname]['ansible_'+zabbix_interface]['ipv4']['address']}}"
-  when: >
-    zbx_client_ip is undefined and
-    zabbix_interface is defined
-
-# this would be nice and easy if ansible_all_ipv4_addresses would contain
-# netmasks...
-- name: try to locate client IP by available networks
-  set_fact:
-    zbx_server_ip: "{{__netconf.0|ipaddr('address')}}"
-    zbx_client_ip: "{{hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address}}"
-  loop_control:
-    loop_var: __netconf
-  with_nested:
-    - "{{zabbix_server_ips|default({})}}"
-    - "{{hostvars[inventory_hostname]['ansible_interfaces']}}"
-  when: >
-    zbx_client_ip is undefined and
-    hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address is defined and
-    __netconf.0|ipaddr('network/prefix') ==
-      (hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.address + "/" +
-       hostvars[inventory_hostname]['ansible_' + __netconf.1].ipv4.netmask)|ipaddr('network/prefix')
-
-# server IP here isn't really used anywhere for now, but might be useful in the
-# future. The output is useful for debugging, though
-- debug:
-    msg:
-      - "using client IP {{zbx_client_ip}}"
-      - "using server IP {{zbx_server_ip|default('')}}"
-  when: zbx_client_ip is defined
 
 - name: build inventory dict
   include: build_inventory_dict.yml
