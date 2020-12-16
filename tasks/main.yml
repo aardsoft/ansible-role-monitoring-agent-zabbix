@@ -62,9 +62,6 @@
     ansible_os_family == "Suse" and
     ansible_facts.services["zabbix_agentd.service"] is defined
 
-- debug:
-    var: ansible_facts.services
-
 - set_fact:
     zbx_client_ip: "{{hostvars[inventory_hostname]['ansible_'+zabbix_interface]['ipv4']['address']}}"
   when: >
@@ -104,11 +101,12 @@
     state: enabled
     immediate: true
     zone: "{{item}}"
-  with_items: "{{zabbix_agent.firewall_zones|default(zabbix_agent_firewall_zones)}}"
+  with_items: "{{zabbix_agent_firewall_zones|default(zabbix_agent.firewall_zones)}}"
   when: >
     (firewalld_available is defined and
     firewalld_available == True) and
-    zabbix_agent_firewall_zones is defined
+    (zabbix_agent_firewall_zones is defined or
+     zabbix_agent.firewall_zones is defined)
 
 - name: configure zabbix agent UDP port
   firewalld:
@@ -117,11 +115,12 @@
     state: enabled
     immediate: true
     zone: "{{item}}"
-  with_items: "{{zabbix_agent.firewall_zones|default(zabbix_agent_firewall_zones)}}"
+  with_items: "{{zabbix_agent_firewall_zones|default(zabbix_agent.firewall_zones)}}"
   when: >
     (firewalld_available is defined and
     firewalld_available == True) and
-    zabbix_agent_firewall_zones is defined
+    (zabbix_agent_firewall_zones is defined or
+     zabbix_agent.firewall_zones is defined)
 
 - name: Ensures include dirs exists
   file:
