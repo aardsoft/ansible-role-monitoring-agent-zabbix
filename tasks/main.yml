@@ -97,6 +97,31 @@
       - "using server IP {{zbx_server_ip|default('')}}"
   when: zbx_client_ip is defined
 
+- name: configure sudoers for zabbix
+  include_role:
+    name: basic-host
+    tasks_from: sudoers_entry.yml
+  vars:
+    _sudo_dict: "{{zabbix_sudo_dict|default(zabbix_agent.sudo_dict)}}"
+  when: >
+    zabbix_sudo_dict is defined or
+    zabbix_agent.sudo_dict is defined and
+    (zabbix_skip_sudo is undefined or zabbix_skip_sudo != true)
+
+- name: configure sudoers for zabbix (default)
+  include_role:
+    name: basic-host
+    tasks_from: sudoers_entry.yml
+  vars:
+    _sudo_dict:
+      zabbix:
+        sudoers:
+          - "ALL=(ALL) NOPASSWD: /usr/bin/ping /usr/sbin/fping"
+  when: >
+    zabbix_sudo_dict is undefined and
+    zabbix_agent.sudo_dict is undefined and
+    (zabbix_skip_sudo is undefined or zabbix_skip_sudo != true)
+
 - name: configure zabbix agent TCP port
   firewalld:
     port: 10050/tcp
