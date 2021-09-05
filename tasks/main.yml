@@ -196,6 +196,17 @@
   vars:
     _zabbix_host: "{{inventory_hostname}}"
 
+- debug:
+    msg:
+      - "Information about zabbix agent host"
+      - "Name: {{ansible_hostname}}"
+      - "Interface: {{ zbx_client_ip | default(ansible_default_ipv4.address) }}"
+      - "Groups: {{host_groups}}"
+      - "Templates: {{link_templates}}"
+  when: >
+    zbx_create_host == 1 and
+    (ansible_default_ipv4.address is defined or zbx_client_ip is defined)
+
 - name: create a new host or update information
   become: no
   local_action:
@@ -218,4 +229,6 @@
         dns: ""
         port: 10050
     proxy: ""
-  when: zbx_create_host == 1
+  when: >
+    zbx_create_host == 1 and
+    (ansible_default_ipv4.address is defined or zbx_client_ip is defined)
