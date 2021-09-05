@@ -13,6 +13,17 @@
 
 PidFile={{ zbx_agent_Pid }}
 
+### Option: LogType
+#	Specifies where log messages are written to:
+#		system  - syslog
+#		file    - file specified with LogFile parameter
+#		console - standard output
+#
+# Mandatory: no
+# Default:
+# LogType=file
+LogType={{zabbix_agentd.log_type|default('console')}}
+
 ### Option: LogFile
 #	Name of log file.
 #	If not set, syslog is used.
@@ -21,7 +32,9 @@ PidFile={{ zbx_agent_Pid }}
 # Default:
 # LogFile=
 
-LogFile={{ zbx_agent_Log }}
+{% if zabbix_agentd.log_type is defined and zabbix_agentd.log_type == 'file' %}
+LogFile={{zabbix_agentd.log_file|default('/var/log/zabbix/zabbix_agentd.log')}}
+{% endif %}
 
 ### Option: LogFileSize
 #	Maximum size of log file in MB.
