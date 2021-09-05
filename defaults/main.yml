@@ -12,7 +12,7 @@ server_url: "{{ zabbix_api_url }}"      # Add the url to the API
 
 host_groups:                                            # List of host groups the host should belong to start each group with -
           - "Linux servers"
-          - "Slack Alarm"
+          - "External Alarm"
 link_templates:                                         # A list of templates that need to be linked to the host
           - "Template OS Linux by Zabbix agent"
           - "Template App SSH Service"
