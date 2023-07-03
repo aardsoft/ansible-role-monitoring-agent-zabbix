@@ -10,8 +10,9 @@
 # Mandatory: no
 # Default:
 # PidFile=/tmp/zabbix_agentd.pid
-
+{% if ansible_os_family != "Windows" %}
 PidFile={{ zbx_agent_Pid }}
+{%endif %}
 
 ### Option: LogType
 #	Specifies where log messages are written to:
@@ -22,7 +23,7 @@ PidFile={{ zbx_agent_Pid }}
 # Mandatory: no
 # Default:
 # LogType=file
-LogType={{zabbix_agentd.log_type|default('console')}}
+LogType={{zabbix_agentd.log_type|default('system')}}
 
 ### Option: LogFile
 #	Name of log file.
@@ -31,8 +32,9 @@ LogType={{zabbix_agentd.log_type|default('console')}}
 # Mandatory: no
 # Default:
 # LogFile=
-
-{% if zabbix_agentd.log_type is defined and zabbix_agentd.log_type == 'file' %}
+{% if ansible_os_family != "Windows" %}
+LogFile={{ zbx_agent_Log }}
+{% elif zabbix_agentd.log_type is defined and zabbix_agentd.log_type == 'file' %}
 LogFile={{zabbix_agentd.log_file|default('/var/log/zabbix/zabbix_agentd.log')}}
 {% endif %}
 
@@ -71,6 +73,8 @@ SourceIP={{ zbx_agent_SourceIp }}
 # SourceIP=
 {% endif %}
 
+# TODO: this should be replaced with
+# AllowKey=system.run[*]
 ### Option: EnableRemoteCommands
 #	Whether remote commands from Zabbix server are allowed.
 #	0 - not allowed
@@ -269,7 +273,9 @@ Timeout={{zbx_agent_Timeout}}
 #
 # Mandatory: no
 # Default:
+{% if ansible_os_family != "Windows" %}
 AllowRoot={{zbx_agent_AllowRoot}}
+{% endif %}
 
 ### Option: Include
 #	You may include individual files or all files in a directory in the configuration file.
@@ -277,9 +283,11 @@ AllowRoot={{zbx_agent_AllowRoot}}
 #
 # Mandatory: no
 # Default:
+{% if ansible_os_family != "Windows" %}
 {% for line in zbx_agent_Include %}
 Include={{line}}
 {% endfor %}
+{% endif %}
 
 # Include=/usr/local/etc/zabbix_agentd.userparams.conf
 # Include=/usr/local/etc/zabbix_agentd.conf.d/

@@ -1,0 +1,175 @@
+- set_fact:
+    role_packages:
+      - policycoreutils
+      - "{{zabbix_agent_package|default('zabbix-agent')}}"
+      - fping
+  when: >
+    ansible_os_family == "RedHat" and
+    ansible_distribution_major_version != '7'
+
+- set_fact:
+    role_packages:
+      - policycoreutils
+      - libselinux-python
+      - libsemanage-python
+      - "{{zabbix_agent_package|default('zabbix40-agent')}}"
+      - fping
+  when: >
+    ansible_os_family == "RedHat" and
+    ansible_distribution_major_version == '7'
+
+- name: remove old zabbix agent
+  yum:
+    name:
+      - zabbix22
+      - zabbix22-agent
+    state: absent
+  become: true
+  when: >
+    ansible_os_family == "RedHat" and
+    ansible_distribution_major_version == '7'
+
+- set_fact:
+    role_packages:
+      - "{{zabbix_agent_package|default('zabbix-agent')}}"
+      - fping
+    zabbix_agent_conf: "zabbix-agent.conf"
+    zabbix_agentd_conf: "zabbix-agentd.conf"
+    zabbix_conf_dir: "/etc/zabbix"
+    zabbix_service: "zabbix-agentd"
+  when: >
+    ansible_os_family == "Suse"
+
+- set_fact:
+    role_packages:
+      - "{{zabbix_agent_package|default('zabbix-agent')}}"
+      - fping
+    zabbix_agent_conf: "zabbix_agent.conf"
+    zabbix_agentd_conf: "zabbix_agentd.conf"
+    zabbix_conf_dir: "/etc/zabbix"
+    zabbix_service: "zabbix-agent"
+  when: >
+    ansible_os_family == "Debian"
+
+- include_role:
+    name: data-utilities
+    tasks_from: install_packages
+  vars:
+    role_bootstrap_packages:
+      - https://repo.zabbix.com/zabbix/5.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_5.0-1+focal_all.deb
+  when: >
+    ansible_os_family == "Debian"
+
+- include_role:
+    name: basic-host
+    tasks_from: install_packages
+
+- service_facts:
+  when: >
+    ansible_os_family == "Suse"
+
+- set_fact:
+    zabbix_service: "zabbix_agentd"
+  when: >
+    ansible_os_family == "Suse" and
+    ansible_facts.services["zabbix_agentd.service"] is defined
+
+- name: configure sudoers for zabbix
+  include_role:
+    name: basic-host
+    tasks_from: sudoers_entry.yml
+  vars:
+    _sudo_dict: "{{zabbix_sudo_dict|default(zabbix_agent.sudo_dict)}}"
+  when: >
+    zabbix_sudo_dict is defined or
+    zabbix_agent.sudo_dict is defined and
+    (zabbix_skip_sudo is undefined or zabbix_skip_sudo != true)
+
+- name: configure sudoers for zabbix (default)
+  include_role:
+    name: basic-host
+    tasks_from: sudoers_entry.yml
+  vars:
+    _sudo_dict:
+      zabbix:
+        sudoers:
+          - "ALL=(ALL) NOPASSWD: /usr/bin/ping /usr/sbin/fping"
+  when: >
+    zabbix_sudo_dict is undefined and
+    zabbix_agent.sudo_dict is undefined and
+    (zabbix_skip_sudo is undefined or zabbix_skip_sudo != true)
+
+- name: configure zabbix agent TCP port
+  firewalld:
+    port: 10050/tcp
+    permanent: true
+    state: enabled
+    immediate: true
+    zone: "{{item}}"
+  with_items: "{{zabbix_agent_firewall_zones|default(zabbix_agent.firewall_zones)}}"
+  become: true
+  when: >
+    (firewalld_available is defined and
+    firewalld_available == True) and
+    (zabbix_agent_firewall_zones is defined or
+     zabbix_agent.firewall_zones is defined)
+
+- name: configure zabbix agent UDP port
+  firewalld:
+    port: 10050/udp
+    permanent: true
+    state: enabled
+    immediate: true
+    zone: "{{item}}"
+  with_items: "{{zabbix_agent_firewall_zones|default(zabbix_agent.firewall_zones)}}"
+  become: true
+  when: >
+    (firewalld_available is defined and
+    firewalld_available == True) and
+    (zabbix_agent_firewall_zones is defined or
+     zabbix_agent.firewall_zones is defined)
+
+- name: Ensures include dirs exists
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items: "{{ zbx_agent_Include }}"
+
+- name: install Zabbix Agentd Config File
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: "{{zabbix_conf_dir|default('/etc')}}/{{zabbix_agentd_conf|default('zabbix_agentd.conf')}}"
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  become: true
+  notify:
+    - restart zabbix-agent
+
+- name: install Zabbix Agent Config File
+  template:
+    src: zabbix_agent.conf.j2
+    dest: "{{zabbix_conf_dir|default('/etc')}}/{{zabbix_agent_conf|default('zabbix_agent.conf')}}"
+    owner: root
+    group: root
+    mode: 0644
+    backup: yes
+  become: true
+  notify:
+    - restart zabbix-agent
+
+- name: ensure Zabbix Agent is running
+  service:
+    name: "{{zabbix_service|default('zabbix-agent')}}"
+    state: started
+    enabled: yes
+  become: true
+
+- name: configure SELinux Policy zabbix
+  seboolean: name=zabbix_can_network state=yes persistent=yes
+  when: >
+    ansible_selinux is defined and
+    ansible_selinux != False and
+    ansible_selinux.status == 'enabled'
+  become: true

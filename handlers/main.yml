@@ -2,3 +2,9 @@
   service:
     name: "{{zabbix_service|default('zabbix-agent')}}"
     state: restarted
+  become: true
+
+- name: restart zabbix-agent on windows
+  win_service:
+    name: Zabbix Agent
+    state: restarted

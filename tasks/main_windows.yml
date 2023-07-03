@@ -1,0 +1,54 @@
+- name: create configuration directory
+  win_file:
+    state: directory
+    path: "{{zabbix_conf_dir|default('c:/ci/etc')}}"
+
+- name: install Zabbix Agentd Config File
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: "{{zabbix_conf_dir|default('c:/ci/etc')}}/{{zabbix_agentd_conf|default('zabbix_agentd.conf')}}"
+    backup: yes
+  notify:
+    - restart zabbix-agent on windows
+
+- name: enable zabbix agent port in firewall
+  win_firewall_rule:
+    name: "Zabbix agent ({{_protocol}})"
+    localport: 10050
+    action: allow
+    direction: in
+    protocol: "{{_protocol}}"
+    state: present
+    enabled: yes
+  with_items:
+    - tcp
+    - udp
+  loop_control:
+    loop_var: _protocol
+
+- name: enable ICMP v4 ping
+  win_firewall_rule:
+    name: ICMP Allow incoming V4 echo request
+    enabled: yes
+    state: present
+    action: allow
+    direction: in
+    protocol: icmpv4
+
+- name: check service state
+  win_service:
+    name: Zabbix Agent
+  register: _service_state
+
+# zabbix_agentd registers cwd as path for the binary
+- name: enable zabbix service
+  win_command: "zabbix_agentd.exe --config {{zabbix_conf_dir|default('c:/ci/etc')}}/{{zabbix_agentd_conf|default('zabbix_agentd.conf')}} --install"
+  args:
+    chdir: 'c:/ci/bin'
+  register: _wincmd_status
+  when: _service_state.exists == false
+
+- name: start zabbix-agent
+  win_service:
+    name: Zabbix Agent
+    state: started

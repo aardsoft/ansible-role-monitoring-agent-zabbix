@@ -25,7 +25,7 @@
       os: "{{ansible_distribution}} {{ansible_distribution_version}}"
       os_short: "{{ansible_distribution}}"
       os_full: "{{ansible_distribution}} {{ansible_distribution_version}} {{ansible_kernel}}"
-      software_full: "python: {{ansible_python_version}} apparmor: {{ansible_apparmor.status}} selinux: {{ansible_selinux.status}}"
+      software_full: "python: {{ansible_python_version|default('N/A')}} apparmor: {{ansible_apparmor.status|default('N/A')}} selinux: {{ansible_selinux.status|default('N/A')}}"
   when: inventory_hostname == _zabbix_host
 
 - set_fact:
@@ -38,7 +38,18 @@
       type: "{{ansible_virtualization_type}}"
   when: >
     inventory_hostname == _zabbix_host and
-    ansible_virtualization_role == 'guest'
+    ansible_virtualization_role == 'guest' and
+    (network_nodes[inventory_hostname].machine is defined)
+
+- name: get inventory facts for non-local virtualization
+  set_fact:
+    _zvirt:
+      chassis: "{{ansible_virtualization_type}}"
+      type: "{{ansible_virtualization_type}}"
+  when: >
+    inventory_hostname == _zabbix_host and
+    ansible_virtualization_role == 'guest' and
+    (network_nodes[inventory_hostname].machine is undefined)
 
 - set_fact:
     _zd: "{{ _zd | combine (_zvirt)}}"
@@ -56,7 +67,7 @@
       chassis: "{{ansible_product_name}}"
       vendor: "{{ansible_system_vendor}}"
       serialno_a: "{{ansible_product_serial}}"
-      type: "{{ansible_form_factor}}"
+      type: "{{ansible_form_factor|default('N/A')}}"
   when: >
     ansible_virtualization_role is undefined or
     ansible_virtualization_role == 'host' or
