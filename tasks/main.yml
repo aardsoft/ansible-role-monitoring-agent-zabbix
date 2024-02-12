@@ -56,7 +56,7 @@
     ansible_os_family != "Darwin"
 
 - name: build inventory dict
-  include: build_inventory_dict.yml
+  include_tasks: build_inventory_dict.yml
   vars:
     _zabbix_host: "{{inventory_hostname}}"
 
