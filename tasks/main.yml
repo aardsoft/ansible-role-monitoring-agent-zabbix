@@ -71,7 +71,7 @@
     zbx_create_host == 1 and
     (ansible_default_ipv4.address is defined or zbx_client_ip is defined)
 
-- name: create a new host or update information
+- name: create a new host or update information (legacy)
   become: no
   local_action:
     module: zabbix_host
@@ -94,5 +94,13 @@
         port: 10050
     proxy: ""
   when: >
+    (ansible_version.full is version('2.9', '>=') and
+     ansible_version.full is version('2.10', '<')) and
+    zbx_create_host == 1 and
+    (ansible_default_ipv4.address is defined or zbx_client_ip is defined)
+
+- include_tasks: create_host_entry.yml
+  when: >
+    ansible_version.full is version('2.10', '>=') and
     zbx_create_host == 1 and
     (ansible_default_ipv4.address is defined or zbx_client_ip is defined)

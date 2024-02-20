@@ -1,0 +1,27 @@
+- name: create a new host or update information
+  become: false
+  vars:
+    ansible_user: "{{ zabbix_api_user|default('Admin') }}"
+    ansible_network_os: community.zabbix.zabbix
+    ansible_connection: httpapi
+    ansible_httpapi_port: 80
+    ansible_httpapi_use_ssl: false
+    ansible_httpapi_validate_certs: false
+    ansible_httpapi_pass: "{{lookup(passdb, zabbix_server_admin_passwd)}}"
+    ansible_host: "{{zabbix_server}}"
+  community.zabbix.zabbix_host:
+    host_name: "{{ ansible_hostname }}"
+    host_groups: "{{ host_groups }}"
+    link_templates: "{{ link_templates }}"
+    status: "enabled"
+    state: "present"
+    inventory_mode: manual
+    inventory_zabbix: "{{_zabbix_inventory_dict}}"
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: "{{ zbx_client_ip | default(ansible_default_ipv4.address) }}"
+        dns: ""
+        port: 10050
+    proxy: ""
