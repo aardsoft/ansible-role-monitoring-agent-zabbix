@@ -8,7 +8,7 @@
     ansible_httpapi_use_ssl: false
     ansible_httpapi_validate_certs: false
     ansible_httpapi_pass: "{{lookup(passdb, zabbix_server_admin_passwd)}}"
-    ansible_host: "{{zabbix_server}}"
+    ansible_host: "{{zabbix_server_ip|default(zabbix_server)}}"
   community.zabbix.zabbix_host:
     host_name: "{{ ansible_hostname }}"
     host_groups: "{{ host_groups }}"
