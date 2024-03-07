@@ -1,6 +1,11 @@
+# The explicit shell type is required to make this work for windows hosts:
+# On windows we set the shell to powershell - but the httpapi executes locally,
+# which typically doesn't have powershell available. As local tasks should
+# use sh anyway that shouldn't break anything on the runner.
 - name: create a new host or update information
   become: false
   vars:
+    ansible_shell_type: sh
     ansible_user: "{{ zabbix_api_user|default('Admin') }}"
     ansible_network_os: community.zabbix.zabbix
     ansible_connection: httpapi
