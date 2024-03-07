@@ -1,0 +1,9 @@
+- name: install Zabbix Agentd Config File
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: "{{zabbix_conf_dir|default('/usr/local/etc/zabbix')}}/{{zabbix_agentd_conf|default('zabbix_agentd.conf')}}"
+    owner: root
+    group: "{{_root_group}}"
+    mode: 0644
+    backup: yes
+  become: true
