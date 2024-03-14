@@ -19,6 +19,21 @@
     zbx_client_ip is undefined and
     zabbix_interface is defined
 
+- debug:
+    msg:
+      - "{{zabbix_server_ips|default({})}}"
+      - "{{hostvars[inventory_hostname]['ansible_interfaces']}}"
+
+- debug:
+    msg:
+      - "{{__netconf.0}}"
+      - "{{__netconf.1}}"
+  loop_control:
+    loop_var: __netconf
+  with_nested:
+    - "{{zabbix_server_ips|default({})}}"
+    - "{{hostvars[inventory_hostname]['ansible_interfaces']}}"
+
 # this would be nice and easy if ansible_all_ipv4_addresses would contain
 # netmasks...
 - name: try to locate client IP by available networks
